@@ -1,5 +1,226 @@
- <!DOCTYPE html>                                                │
-  │  2 │ <html>                                                         │
-  │  3 │   <!-- Paste the Responder Form HTML code here -->             │
-  │  4 │   const SUPABASE_URL = "https://supabase.com/dashboard/project/ljqrvgnobnvbuntgosge/editor/17651?schema=public";              │
-  │  5 │   const SUPABASE_KEY = "sb_publishable_QemIK8fj-5mmnnXVy0bHCg_vzJ4srJ3";   
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Church Directory</title>
+  <script src="https://jsdelivr.net"></script>
+  <style>
+    :root {
+      --bg: #fdfbf7;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --accent: #eff6ff;
+      --text: #1e293b;
+      --muted: #475569;
+      --border: #cbd5e1;
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); padding: 24px 16px 60px; }
+    .container { max-width: 780px; margin: 0 auto; }
+
+    .header-card {
+      background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+      border: 1px solid #dbeafe; border-top: 6px solid var(--primary);
+      border-radius: 16px; padding: 28px 32px; margin-bottom: 24px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.03);
+    }
+    .header-card h1 { margin: 0 0 8px; font-size: 28px; color: #0f172a; }
+    .header-card p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+
+    .section-card {
+      background: var(--card); border: 1px solid #e2e8f0; border-radius: 16px;
+      padding: 24px 28px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    }
+    .section-title {
+      display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700;
+      color: #0f172a; margin: 0 0 18px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .field { margin-bottom: 16px; }
+    label { display: block; font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 6px; }
+    input[type="text"], select, textarea {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 14px; color: #0f172a; background-color: #ffffff;
+    }
+    select option { color: #0f172a; background-color: #ffffff; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); border-color: transparent; }
+
+    .dob-group { display: grid; grid-template-columns: 1fr 1.3fr 1.2fr; gap: 8px; }
+    .radio-row { display: flex; gap: 20px; align-items: center; padding-top: 4px; }
+    .radio-row label { display: flex; align-items: center; gap: 6px; font-weight: 500; margin: 0; cursor: pointer; }
+
+    .nested-box {
+      border-left: 3px solid #93c5fd; background: #f8fafc; border-radius: 12px;
+      padding: 18px; margin-top: 14px; position: relative;
+    }
+    .nested-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .nested-header strong { color: #1e40af; font-size: 15px; }
+
+    button {
+      cursor: pointer; border: none; border-radius: 8px; font-weight: 600; font-size: 14px;
+      padding: 10px 16px; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-add { background: #eff6ff; color: var(--primary); border: 1px solid #bfdbfe; }
+    .btn-add:hover { background: #dbeafe; }
+    .btn-remove { background: #fee2e2; color: var(--danger); padding: 6px 10px; font-size: 12px; }
+    .btn-submit {
+      background: var(--primary); color: #fff; font-size: 16px; padding: 14px 28px;
+      width: 100%; justify-content: center; margin-top: 8px;
+    }
+    .btn-submit:hover { background: var(--primary-hover); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .success-banner {
+      display: none; background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46;
+      padding: 20px; border-radius: 12px; text-align: center; margin-top: 16px; font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-card">
+      <h1>🏡 Church Directory</h1>
+      <p>This is a form to help collect church member details to help compile our church directory.</p>
+    </div>
+
+    <form id="directory-form" onsubmit="handleSubmit(event)">
+      <!-- 1. BRANCH & CONGREGATION -->
+      <div class="section-card">
+        <div class="section-title">⛪ Branch & Congregation</div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="branch">Select Branch *</label>
+            <select id="branch" required onchange="updateCongregations()">
+              <option value="">-- Choose Branch --</option>
+              <option value="Shanti Nagar">Shanti Nagar</option>
+              <option value="Bommanahalli">Bommanahalli</option>
+              <option value="Muthanallur">Muthanallur</option>
+            </select>
+          </div>
+          <div class="field" id="congregation-wrap" style="display:none;">
+            <label for="congregation">Select Congregation *</label>
+            <select id="congregation" required></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. PARENTS DETAILS -->
+      <div class="section-card">
+        <div class="section-title">👨‍👩‍👧‍👦 Parents Details</div>
+        <div class="grid-2">
+          <!-- Father -->
+          <div>
+            <div class="field">
+              <label for="father-name">👨 Father's Name *</label>
+              <input type="text" id="father-name" required placeholder="Enter father's full name" />
+            </div>
+            <div class="field">
+              <label>📅 Father's Date of Birth</label>
+              <div class="dob-group" id="father-dob"></div>
+            </div>
+          </div>
+          <!-- Mother -->
+          <div>
+            <div class="field">
+              <label for="mother-name">👩 Mother's Name *</label>
+              <input type="text" id="mother-name" required placeholder="Enter mother's full name" />
+            </div>
+            <div class="field">
+              <label>📅 Mother's Date of Birth</label>
+              <div class="dob-group" id="mother-dob"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:8px;">
+          <label>Are the parents members of the church?</label>
+          <div class="radio-row">
+            <label><input type="radio" name="parents-member" value="Yes" checked /> Yes</label>
+            <label><input type="radio" name="parents-member" value="No" /> No</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. CHILDREN & DESCENDANTS -->
+      <div class="section-card">
+        <div class="section-title">👶 Children & Family Tree</div>
+        <p style="font-size:14px; color:#475569; margin-top:0;">Do you have children? Click the button below to add each child and their spouse/children if married.</p>
+        <div id="root-children"></div>
+        <button type="button" class="btn-add" onclick="addChildNode('root-children', 1)">+ Add Child</button>
+      </div>
+
+      <!-- 4. NAMES & ADDRESSES -->
+      <div class="section-card">
+        <div class="section-title">📍 Names & Addresses</div>
+        <div id="addresses-list"></div>
+        <button type="button" class="btn-add" onclick="addAddressRow()">+ Add Name & Address</button>
+      </div>
+
+      <!-- 5. FAMILY PHOTO -->
+      <div class="section-card">
+        <div class="section-title">📸 Family Photo</div>
+        <div class="field">
+          <label for="family-photo">Upload Family Photo (PNG, JPG, JPEG)</label>
+          <input type="file" id="family-photo" accept=".png,.jpg,.jpeg,image/png,image/jpeg" />
+          <small style="color:#64748b; display:block; margin-top:6px;">Accepted formats: PNG, JPG, JPEG.</small>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submit-btn">Submit Directory Form</button>
+      <div class="success-banner" id="success-banner">
+        ✅ Thank you! Your family details have been saved to the Church Directory.
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // =========================================================
+    // PASTE YOUR SUPABASE PROJECT CREDENTIALS BELOW
+    // =========================================================
+    const SUPABASE_URL = "YOUR_SUPABASE_URL";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+    function createDobSelectors(containerId) {
+      const wrap = document.getElementById(containerId);
+      if (!wrap) return;
+      let dayOpts = `<option value="">DD</option>`;
+      for (let d = 1; d <= 31; d++) dayOpts += `<option value="${String(d).padStart(2,'0')}">${String(d).padStart(2,'0')}</option>`;
+
+      let monthOpts = `<option value="">MM</option>`;
+      MONTHS.forEach((m, i) => monthOpts += `<option value="${String(i+1).padStart(2,'0')}">${m}</option>`);
+
+      let yearOpts = `<option value="">YYYY</option>`;
+      const currentYear = new Date().getFullYear();
+      for (let y = currentYear; y >= 1920; y--) yearOpts += `<option value="${y}">${y}</option>`;
+
+      wrap.innerHTML = `
+        <select class="dob-day">${dayOpts}</select>
+        <select class="dob-month">${monthOpts}</select>
+        <select class="dob-year">${yearOpts}</select>
+      `;
+    }
+
+    function getDobValue(containerEl) {
+      const d = containerEl.querySelector(".dob-day").value;
+      const m = containerEl.querySelector(".dob-month").value;
+      const y = containerEl.querySelector(".dob-year").value;
+      return (d && m && y) ? `${d}/${m}/${y}` : "";
+    }
+
+    function updateCongregations() {
+      const branch = document.getElementById("branch").value;
+      const wrap = document.getElementById("congregation-wrap");
+      const select = document.getElementById("congregation");
+      select.innerHTML = "";
+
+      const optionsMap = {
+        "Shanti Nagar": ["Malayalam", "Tamil"],
