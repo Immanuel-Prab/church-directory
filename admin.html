@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Church Directory — Admin Dashboard</title>
+  <!-- Supabase JS Client & SheetJS for Real Excel (.xlsx) Export -->
+  <script src="https://jsdelivr.net"></script>
+  <script src="https://jsdelivr.net"></script>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #059669;
+      --danger: #dc2626;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    /* Login Screen */
+    #login-screen {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .login-card {
+      background: var(--card); padding: 36px; border-radius: 16px; width: 100%; max-width: 400px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid var(--border);
+    }
+    .login-card h2 { margin: 0 0 8px; font-size: 22px; }
+    .login-card p { margin: 0 0 24px; color: var(--muted); font-size: 14px; }
+
+    /* Form Controls */
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #334155; }
+    input, select, textarea {
+      width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px;
+      font-size: 14px; color: var(--text); background: #fff; margin-bottom: 16px;
+    }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); border-color: transparent; }
+
+    button {
+      cursor: pointer; border: none; border-radius: 8px; font-weight: 600; font-size: 14px;
+      padding: 10px 16px; transition: background 0.15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:hover { background: #047857; }
+    .btn-danger { background: #fee2e2; color: var(--danger); }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-ghost { background: #f1f5f9; color: var(--text); }
+    .btn-ghost:hover { background: #e2e8f0; }
+
+    /* Dashboard Layout */
+    #dashboard { display: none; padding: 24px; max-width: 1300px; margin: 0 auto; }
+    .topbar {
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+      gap: 16px; background: var(--card); padding: 20px 24px; border-radius: 14px;
+      border: 1px solid var(--border); margin-bottom: 20px;
+    }
+    .topbar h1 { margin: 0; font-size: 22px; }
+    .topbar p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .filters {
+      display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+    }
+    .filters input, .filters select { max-width: 260px; margin-bottom: 0; }
+
+    /* Table */
+    .table-wrap {
+      background: var(--card); border-radius: 14px; border: 1px solid var(--border);
+      overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+    th { background: #f8fafc; padding: 14px 16px; font-weight: 600; color: #475569; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:hover td { background: #f8fafc; }
+    .badge {
+      display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      background: #eff6ff; color: var(--primary);
+    }
+    .thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+
+    /* Modal */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5);
+      align-items: center; justify-content: center; padding: 20px; z-index: 50;
+    }
+    .modal {
+      background: #fff; border-radius: 16px; max-width: 650px; width: 100%; max-height: 90vh;
+      overflow-y: auto; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .error-msg { color: var(--danger); font-size: 13px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+
+  <!-- ADMIN LOGIN SCREEN -->
+  <div id="login-screen">
+    <div class="login-card">
+      <h2>Church Directory Admin</h2>
+      <p>Sign in with your Supabase Admin email & password to view, edit, and export directory records.</p>
+      <div id="login-error" class="error-msg"></div>
+      <label for="admin-email">Admin Email</label>
+      <input type="email" id="admin-email" placeholder="admin@church.org" />
+      <label for="admin-password">Password</label>
+      <input type="password" id="admin-password" placeholder="••••••••" />
+      <button class="btn-primary" style="width:100%" onclick="handleLogin()">Sign In to Dashboard</button>
+    </div>
+  </div>
+
+  <!-- MAIN ADMIN DASHBOARD -->
+  <div id="dashboard">
+    <div class="topbar">
+      <div>
+        <h1>Church Directory — Admin Portal</h1>
+        <p id="record-count">Loading records...</p>
+      </div>
+      <div class="actions">
+        <button class="btn-ghost" onclick="loadEntries()">Refresh</button>
+        <button class="btn-success" onclick="exportToExcel()">Download Excel (.xlsx)</button>
+        <button class="btn-danger" onclick="handleLogout()">Sign Out</button>
+      </div>
+    </div>
+
+    <div class="filters">
+      <input type="text" id="search-box" placeholder="Search by parent, child, or address..." oninput="renderTable()" />
+      <select id="branch-filter" onchange="renderTable()">
+        <option value="">All Branches</option>
+        <option value="Shanti Nagar">Shanti Nagar</option>
+        <option value="Bommanahalli">Bommanahalli</option>
+        <option value="Muthanallur">Muthanallur</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Photo</th>
+            <th>Branch & Congregation</th>
+            <th>Father Details</th>
+            <th>Mother Details</th>
+            <th>Members?</th>
+            <th>Children & Spouses</th>
+            <th>Names & Addresses</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- EDIT ENTRY MODAL -->
+  <div id="edit-modal" class="modal-backdrop">
+    <div class="modal">
+      <h2 style="margin-top:0">Edit Family Record</h2>
+      <input type="hidden" id="edit-id" />
+      <div class="modal-grid">
+        <div>
+          <label>Branch</label>
+          <select id="edit-branch">
+            <option value="Shanti Nagar">Shanti Nagar</option>
+            <option value="Bommanahalli">Bommanahalli</option>
+            <option value="Muthanallur">Muthanallur</option>
+          </select>
+        </div>
+        <div>
+          <label>Congregation</label>
+          <input type="text" id="edit-congregation" />
+        </div>
+        <div>
+          <label>Father's Name</label>
+          <input type="text" id="edit-father-name" />
+        </div>
+        <div>
+          <label>Father's DOB (DD/MM/YYYY)</label>
+          <input type="text" id="edit-father-dob" />
+        </div>
+        <div>
+          <label>Mother's Name</label>
+          <input type="text" id="edit-mother-name" />
+        </div>
+        <div>
+          <label>Mother's DOB (DD/MM/YYYY)</label>
+          <input type="text" id="edit-mother-dob" />
+        </div>
+      </div>
+      <label>Parents Church Members?</label>
+      <select id="edit-parents-members">
+        <option value="Yes">Yes</option>
+        <option value="No">No</option>
+      </select>
+      <label>Children & Spouses Summary</label>
+      <textarea id="edit-children" rows="3"></textarea>
+      <label>Names & Addresses Summary</label>
+      <textarea id="edit-addresses" rows="3"></textarea>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+        <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================
+    // 1. PASTE YOUR SUPABASE PROJECT CREDENTIALS BELOW
+    // =========================================================
+    const SUPABASE_URL = "YOUR_SUPABASE_URL";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let allEntries = [];
+
+    // Check existing session on load
+    window.addEventListener("DOMContentLoaded", async () => {
+      const { data: { session } } = await db.auth.getSession();
+      if (session) showDashboard();
+    });
+
+    async function handleLogin() {
+      const email = document.getElementById("admin-email").value.trim();
+      const password = document.getElementById("admin-password").value;
+      const errBox = document.getElementById("login-error");
+      errBox.textContent = "";
+
+      const { error } = await db.auth.signInWithPassword({ email, password });
+      if (error) {
+        errBox.textContent = error.message;
+      } else {
+        showDashboard();
+      }
+    }
+
+    async function handleLogout() {
+      await db.auth.signOut();
+      document.getElementById("dashboard").style.display = "none";
+      document.getElementById("login-screen").style.display = "flex";
+    }
+
+    function showDashboard() {
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+      loadEntries();
+    }
+
