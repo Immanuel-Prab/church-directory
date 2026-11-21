@@ -224,3 +224,141 @@
 
       const optionsMap = {
         "Shanti Nagar": ["Malayalam", "Tamil"],
+
+        "Bommanahalli": ["Kannada", "Tamil", "Telugu"],
+"Muthanallur": ["Kannada"]
+};
+if (!optionsMap[branch]) {
+wrap.style.display = "none";
+return;
+}
+wrap.style.display = "block";
+optionsMap[branch].forEach(c => {
+const opt = document.createElement("option");
+opt.value = c;
+opt.textContent = c;
+select.appendChild(opt);
+});
+}
+let uidCounter = 0;
+function addChildNode(containerId, level) {
+uidCounter++;
+const uid = child-${uidCounter};
+const container = document.getElementById(containerId);
+const div = document.createElement("div");
+div.className = "nested-box child-node";
+div.dataset.level = level;
+div.id = uid;
+div.innerHTML = <div class="nested-header"> <strong>${level === 1 ? "Child Details" :Generation ${level} Child`}
+Remove
+
+
+Child's Name
+Date of Birth
+Member of the church?
+ Yes
+ No
+Married?
+ No
+ Yes
+Spouse's Name
+Spouse's Date of Birth
++ Add Child
+
+; container.appendChild(div); createDobSelectors(${uid}-dob); createDobSelectors(${uid}-sdob`);
+}
+function toggleSpouse(uid, isMarried) {
+document.getElementById(${uid}-spouse-area).style.display = isMarried ? "block" : "none";
+}
+function addAddressRow() {
+uidCounter++;
+const uid = addr-${uidCounter};
+const list = document.getElementById("addresses-list");
+const div = document.createElement("div");
+div.className = "nested-box addr-node";
+div.id = uid;
+div.innerHTML = `
+
+Contact & Address Entry
+Remove
+
+Name
+Address
+`;
+list.appendChild(div);
+}
+function serializeChildren(containerEl, indent = "") {
+let lines = [];
+const nodes = Array.from(containerEl.children).filter(el => el.classList.contains("child-node"));
+nodes.forEach((node, idx) => {
+const name = node.querySelector(".c-name").value.trim() || "Unnamed";
+const dob = getDobValue(node.querySelector(".c-dob")) || "N/A";
+const member = node.querySelector(input[name="${node.id}-member"]:checked)?.value || "Yes";
+const married = node.querySelector(input[name="${node.id}-married"]:checked)?.value || "No";
+let line = ${indent}${idx + 1}. ${name} (DOB: ${dob}, Member: ${member}, Married: ${married});
+if (married === "Yes") {
+const sName = node.querySelector(".s-name").value.trim() || "Unnamed";
+const sDob = getDobValue(node.querySelector(".s-dob")) || "N/A";
+line +=  — Spouse: ${sName} (DOB: ${sDob});
+}
+lines.push(line);
+if (married === "Yes") {
+const subContainer = document.getElementById(${node.id}-subchildren);
+const subLines = serializeChildren(subContainer, indent + "   ");
+if (subLines) lines.push(subLines);
+}
+});
+return lines.join("\n");
+}
+async function handleSubmit(e) {
+e.preventDefault();
+const btn = document.getElementById("submit-btn");
+btn.disabled = true;
+btn.textContent = "Submitting...";
+try {
+let photoUrl = "";
+const fileInput = document.getElementById("family-photo");
+if (fileInput.files && fileInput.files[0]) {
+const file = fileInput.files[0];
+const cleanName = ${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")};
+const { error: uploadError } = await db.storage.from("family-photos").upload(cleanName, file);
+if (uploadError) throw uploadError;
+const { data: urlData } = db.storage.from("family-photos").getPublicUrl(cleanName);
+photoUrl = urlData.publicUrl;
+}
+const addrNodes = document.querySelectorAll(".addr-node");
+const addrLines = Array.from(addrNodes).map((n, i) => {
+const nm = n.querySelector(".a-name").value.trim();
+const ad = n.querySelector(".a-address").value.trim();
+return (nm || ad) ? ${i + 1}. ${nm}: ${ad} : "";
+}).filter(Boolean).join("\n");
+const payload = {
+branch: document.getElementById("branch").value,
+congregation: document.getElementById("congregation").value,
+father_name: document.getElementById("father-name").value.trim(),
+father_dob: getDobValue(document.getElementById("father-dob")),
+mother_name: document.getElementById("mother-name").value.trim(),
+mother_dob: getDobValue(document.getElementById("mother-dob")),
+parents_members: document.querySelector('input[name="parents-member"]:checked')?.value || "Yes",
+children_summary: serializeChildren(document.getElementById("root-children")),
+addresses_summary: addrLines,
+photo_url: photoUrl
+};
+const { error } = await db.from("directory_entries").insert([payload]);
+if (error) throw error;
+document.getElementById("directory-form").reset();
+document.getElementById("root-children").innerHTML = "";
+document.getElementById("addresses-list").innerHTML = "";
+addAddressRow();
+document.getElementById("success-banner").style.display = "block";
+} catch (err) {
+alert("Submission failed: " + err.message);
+} finally {
+btn.disabled = false;
+btn.textContent = "Submit Directory Form";
+}
+}
+// Initialize DOB dropdowns and 1 default address field on page load
+createDobSelectors("father-dob");
+createDobSelectors("mother-dob");
+addAddressRow();
